@@ -478,12 +478,20 @@
 
   /* ── White Glove Section ─────────────────────────────── */
   .white-glove-card {
-    border: 2px solid var(--accent);
-    background: linear-gradient(135deg, rgba(27,58,107,0.04), rgba(27,58,107,0.01));
+    border: 2px solid var(--border);
+    background: linear-gradient(135deg, rgba(27,58,107,0.02), rgba(27,58,107,0.00));
     padding: 36px;
     margin-bottom: 40px;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .white-glove-card.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(27,58,107,0.08), rgba(27,58,107,0.03));
+    box-shadow: 0 4px 24px rgba(27,58,107,0.18);
   }
 
   .white-glove-card::before {
@@ -491,6 +499,11 @@
     position: absolute;
     top: 0; left: 0;
     width: 4px; height: 100%;
+    background: var(--border-strong);
+    transition: background 0.3s;
+  }
+
+  .white-glove-card.selected::before {
     background: var(--accent);
   }
 
@@ -1035,7 +1048,8 @@
     </div>
 
     <!-- White Glove -->
-    <div class="white-glove-card">
+    <div class="white-glove-card" id="white-glove-card" onclick="selectWhiteGlove()">
+      <div class="plan-select-check" id="wg-check" style="top:20px;left:auto;right:20px"></div>
       <div class="white-glove-badge">✦ By Invitation</div>
       <div class="white-glove-title">White Glove</div>
       <div class="white-glove-body">
@@ -1049,7 +1063,7 @@
       </div>
       <div class="white-glove-cta">White Glove plans are priced specific to each client based on the size and complexity of the installation. Contact us to learn more.</div>
       <div style="margin-top:20px">
-        <button class="btn btn-secondary" onclick="selectWhiteGlove()">Inquire About White Glove →</button>
+        <span class="btn btn-secondary" style="pointer-events:none">Inquire About White Glove →</span>
       </div>
     </div>
 
@@ -1261,13 +1275,23 @@ function renderSelectPlans() {
 function selectPlan(id) {
   state.selectedPlan = id;
   renderSelectPlans();
+  updateWhiteGloveCard();
 }
 
 function selectWhiteGlove() {
   state.selectedPlan = 'white-glove';
   renderSelectPlans();
+  updateWhiteGloveCard();
   showToast('White Glove selected — complete your info below.');
   document.getElementById('client-first').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateWhiteGloveCard() {
+  const card = document.getElementById('white-glove-card');
+  const check = document.getElementById('wg-check');
+  const isWG = state.selectedPlan === 'white-glove';
+  card.classList.toggle('selected', isWG);
+  check.textContent = isWG ? '✓' : '';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1342,23 +1366,117 @@ function buildReview() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SUBMIT
+// BUILD MESSAGE TEXT
 // ─────────────────────────────────────────────────────────────
-function submitSelection() {
+function buildMessageText() {
+  const div = '─────────────────────────────';
+  const clientName = ((state.client.first || '') + ' ' + (state.client.last || '')).trim() || '—';
+  const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const plan = PLANS.find(p => p.id === state.selectedPlan);
+  const isWhiteGlove = state.selectedPlan === 'white-glove';
+  const planName = isWhiteGlove ? 'White Glove' : (plan ? plan.name : 'None selected');
+  const planPrice = isWhiteGlove ? 'Custom (annual)' : (plan ? `$${plan.price}/mo` : '—');
+
+  let text = `PERSONAL TECHNOLOGY — SERVICE MEMBERSHIP REQUEST\nptech.la\n`;
+  text += `${div}\n\n`;
+  text += `CLIENT\n`;
+  text += `  Name:      ${clientName}\n`;
+  text += `  Email:     ${state.client.email || '—'}\n`;
+  text += `  Phone:     ${state.client.phone || '—'}\n`;
+  text += `  Address:   ${state.client.address || '—'}\n`;
+  text += `  Date:      ${date}\n\n`;
+  text += `${div}\n\n`;
+  text += `SELECTED PLAN\n\n`;
+  text += `  Plan:      ${planName}\n`;
+  text += `  Price:     ${planPrice}\n\n`;
+
+  if (isWhiteGlove) {
+    text += `  Note: White Glove plans are priced specific to each client\n`;
+    text += `  based on the size and complexity of the installation.\n`;
+    text += `  This client is requesting a consultation.\n\n`;
+  }
+
+  if (plan) {
+    text += `  FEATURES\n`;
+    for (const f of plan.features) {
+      text += `  ${f.included ? '✓' : '—'} ${f.text}\n`;
+    }
+    text += `\n  ADVANCED SUPPORT RATES\n`;
+    text += `  Business hours: ${plan.rates.business}\n`;
+    text += `  After hours:    ${plan.rates.after}\n\n`;
+  }
+
+  if (state.client.notes) {
+    text += `${div}\n\n`;
+    text += `CLIENT NOTES\n\n`;
+    text += `  ${state.client.notes}\n\n`;
+  }
+
+  text += `${div}\n\n`;
+  text += `Submitted: ${new Date().toLocaleString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+  })}\n`;
+  text += `\nPersonal Technology  ·  ptech.la`;
+
+  return text;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUBMIT (EmailJS — same as PTech-New-Project)
+// ─────────────────────────────────────────────────────────────
+async function submitSelection() {
   if (!state.selectedPlan) {
     showToast('Please select a plan first.');
     return;
   }
 
-  const btn = document.getElementById('btn-submit');
-  btn.textContent = 'Submitting…';
+  const btn  = document.getElementById('btn-submit');
+  btn.textContent = 'Sending…';
   btn.disabled = true;
 
-  // Simulate submission (in production this would hit an API)
-  setTimeout(() => {
-    btn.textContent = '✓ Submitted';
-    showToast('Thank you! Our team will be in touch shortly.');
-  }, 1500);
+  const clientEmail = (state.client.email || '').trim();
+  const clientName  = ((state.client.first || '') + ' ' + (state.client.last || '')).trim();
+  const date        = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const plan = PLANS.find(p => p.id === state.selectedPlan);
+  const isWhiteGlove = state.selectedPlan === 'white-glove';
+  const planName = isWhiteGlove ? 'White Glove' : (plan ? plan.name : '');
+
+  const subject = `Personal Technology Service Membership — ${planName} — ${clientName} — ${date}`;
+  const messageBody = buildMessageText();
+
+  try {
+    if (!window.emailjs) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load EmailJS SDK'));
+        document.head.appendChild(s);
+      });
+    }
+    emailjs.init('Y2We8dm3ltBl_jGyt');
+
+    await emailjs.send('service_obhrg8f', 'template_9mjotkb', {
+      to_email: clientEmail || 'info@ptech.la',
+      subject:  subject,
+      message:  messageBody,
+    });
+
+    btn.textContent = '✓ Sent';
+    btn.disabled = true;
+    const sentTo = clientEmail ? `${clientEmail} and Personal Technology` : 'Personal Technology';
+    showToast(`Membership request sent to ${sentTo}.`);
+
+  } catch (err) {
+    console.error('EmailJS error:', err);
+    btn.textContent = 'Submit →';
+    btn.disabled = false;
+    const detail = err.text || err.message || err.status || JSON.stringify(err) || 'Unknown error';
+    showToast('Send failed: ' + detail);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
