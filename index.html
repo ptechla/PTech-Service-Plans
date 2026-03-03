@@ -484,14 +484,7 @@
     margin-bottom: 40px;
     position: relative;
     overflow: hidden;
-    cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .white-glove-card.selected {
-    border-color: var(--accent);
-    background: linear-gradient(135deg, rgba(27,58,107,0.08), rgba(27,58,107,0.03));
-    box-shadow: 0 4px 24px rgba(27,58,107,0.18);
   }
 
   .white-glove-card::before {
@@ -500,11 +493,14 @@
     top: 0; left: 0;
     width: 4px; height: 100%;
     background: var(--border-strong);
-    transition: background 0.3s;
   }
 
-  .white-glove-card.selected::before {
-    background: var(--accent);
+  .wg-btn-selected {
+    background: var(--accent) !important;
+    color: #FFFFFF !important;
+    border-color: var(--accent) !important;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(27,58,107,0.25);
   }
 
   .white-glove-badge {
@@ -1048,22 +1044,21 @@
     </div>
 
     <!-- White Glove -->
-    <div class="white-glove-card" id="white-glove-card" onclick="selectWhiteGlove()">
-      <div class="plan-select-check" id="wg-check" style="top:20px;left:auto;right:20px"></div>
+    <div class="white-glove-card" id="white-glove-card">
       <div class="white-glove-badge">✦ By Invitation</div>
       <div class="white-glove-title">White Glove</div>
       <div class="white-glove-body">
-        For clients who prefer absolute simplicity, our White Glove plan is billed annually and includes <strong>Priority Support plus all hourly service calls</strong> for one price. No invoices for individual visits. No hourly rates. Just seamless, unlimited support — exactly when you need it.
+        For clients who prefer absolute simplicity, our White Glove plan is billed annually and includes <strong>Priority Support plus all weekday service calls</strong> for one price. No invoices for individual visits. No hourly rates. Just seamless, unlimited weekday support — exactly when you need it.
       </div>
       <div class="white-glove-features">
         <div class="white-glove-feature"><span class="check">✓</span> Everything in Priority membership</div>
-        <div class="white-glove-feature"><span class="check">✓</span> All on-site service calls included</div>
+        <div class="white-glove-feature"><span class="check">✓</span> All weekday on-site service calls included</div>
         <div class="white-glove-feature"><span class="check">✓</span> No hourly billing — one annual price</div>
         <div class="white-glove-feature"><span class="check">✓</span> Custom-priced for your home</div>
       </div>
       <div class="white-glove-cta">White Glove plans are priced specific to each client based on the size and complexity of the installation. Contact us to learn more.</div>
       <div style="margin-top:20px">
-        <span class="btn btn-secondary" style="pointer-events:none">Inquire About White Glove →</span>
+        <button class="btn btn-secondary" id="wg-btn" onclick="selectWhiteGlove()">Inquire About White Glove →</button>
       </div>
     </div>
 
@@ -1287,11 +1282,10 @@ function selectWhiteGlove() {
 }
 
 function updateWhiteGloveCard() {
-  const card = document.getElementById('white-glove-card');
-  const check = document.getElementById('wg-check');
+  const btn = document.getElementById('wg-btn');
   const isWG = state.selectedPlan === 'white-glove';
-  card.classList.toggle('selected', isWG);
-  check.textContent = isWG ? '✓' : '';
+  btn.classList.toggle('wg-btn-selected', isWG);
+  btn.textContent = isWG ? '✓ White Glove Selected' : 'Inquire About White Glove →';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1358,7 +1352,7 @@ function buildReview() {
       <span class="review-total-value">${planPrice}</span>
     </div>
     ${isWhiteGlove ? `
-      <div class="review-note">White Glove memberships are priced specific to each client. Our team will reach out to discuss your custom annual rate, which includes Priority Support and all on-site service calls.</div>
+      <div class="review-note">White Glove memberships are priced specific to each client. Our team will reach out to discuss your custom annual rate, which includes Priority Support and all weekday on-site service calls.</div>
     ` : `
       <div class="review-note">Month-to-month. No commitment. Our team will contact you to activate your ${planName} membership and set up your account.</div>
     `}
@@ -1378,7 +1372,7 @@ function buildMessageText() {
   const planName = isWhiteGlove ? 'White Glove' : (plan ? plan.name : 'None selected');
   const planPrice = isWhiteGlove ? 'Custom (annual)' : (plan ? `$${plan.price}/mo` : '—');
 
-  let text = `PERSONAL TECHNOLOGY — SERVICE MEMBERSHIP REQUEST\nptech.la\n`;
+  let text = `PERSONAL TECHNOLOGY — SERVICE PLAN ENROLLMENT\n${planName} Plan\nptech.la\n`;
   text += `${div}\n\n`;
   text += `CLIENT\n`;
   text += `  Name:      ${clientName}\n`;
@@ -1392,8 +1386,9 @@ function buildMessageText() {
   text += `  Price:     ${planPrice}\n\n`;
 
   if (isWhiteGlove) {
-    text += `  Note: White Glove plans are priced specific to each client\n`;
-    text += `  based on the size and complexity of the installation.\n`;
+    text += `  Note: White Glove plans include Priority Support and all\n`;
+    text += `  weekday on-site service calls. Priced specific to each\n`;
+    text += `  client based on installation size and complexity.\n`;
     text += `  This client is requesting a consultation.\n\n`;
   }
 
@@ -1444,7 +1439,7 @@ async function submitSelection() {
   const isWhiteGlove = state.selectedPlan === 'white-glove';
   const planName = isWhiteGlove ? 'White Glove' : (plan ? plan.name : '');
 
-  const subject = `Personal Technology Service Membership — ${planName} — ${clientName} — ${date}`;
+  const subject = `Service Plan Enrollment — ${planName} Plan — ${clientName} — ${date}`;
   const messageBody = buildMessageText();
 
   try {
