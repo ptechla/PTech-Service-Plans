@@ -863,7 +863,6 @@
         <div class="plan-rates">
           <div class="plan-rates-label">Advanced Support Rates</div>
           <div class="plan-rate-row"><span>Business hours</span><span class="rate">$225/hr</span></div>
-          <div class="plan-rate-row"><span>After hours</span><span class="rate">$450/hr</span></div>
         </div>
       </div>
 
@@ -1006,7 +1005,7 @@
             </tr>
             <tr>
               <td>After-Hours Rate</td>
-              <td>$450/hr</td>
+              <td class="dash">—</td>
               <td>$360/hr</td>
               <td>$360/hr</td>
               <td>$360/hr</td>
@@ -1142,7 +1141,7 @@ const PLANS = [
       { text: 'Annual tech review', included: false },
       { text: 'Proactive system monitoring', included: false },
     ],
-    rates: { business: '$225/hr', after: '$450/hr' }
+    rates: { business: '$225/hr', after: null }
   },
   {
     id: 'priority',
@@ -1260,7 +1259,7 @@ function renderSelectPlans() {
         <div class="plan-rates">
           <div class="plan-rates-label">Advanced Support Rates</div>
           <div class="plan-rate-row"><span>Business hours</span><span class="rate">${plan.rates.business}</span></div>
-          <div class="plan-rate-row"><span>After hours</span><span class="rate">${plan.rates.after}</span></div>
+          ${plan.rates.after ? `<div class="plan-rate-row"><span>After hours</span><span class="rate">${plan.rates.after}</span></div>` : ''}
         </div>
       </div>
     `;
@@ -1399,7 +1398,8 @@ function buildMessageText() {
     }
     text += `\n  ADVANCED SUPPORT RATES\n`;
     text += `  Business hours: ${plan.rates.business}\n`;
-    text += `  After hours:    ${plan.rates.after}\n\n`;
+    if (plan.rates.after) text += `  After hours:    ${plan.rates.after}\n`;
+    text += `\n`;
   }
 
   if (state.client.notes) {
